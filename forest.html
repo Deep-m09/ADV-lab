@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Environment/Forest Cover Dashboard with Labels</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        svg { border: 1px solid #ccc; margin-bottom: 20px; }
+        .bar { fill: teal; }
+        .scatter-dot { fill: blue; opacity: 0.7; }
+        .box { fill: lightblue; }
+        .line { stroke: red; stroke-width: 2px; }
+        .axis-label { font-size: 12px; text-anchor: middle; }
+        .chart-title { font-size: 16px; text-anchor: middle; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Environment/Forest Cover Dashboard with Labels</h1>
+    <div id="bar-chart" class="chart"></div>
+    <div id="scatter-plot" class="chart"></div>
+    <div id="box-whisker-plot" class="chart"></div>
+    <div id="regression-plot" class="chart"></div>
+
+    <script>
+        const data = [
+            { Cover_Type: 1, Elevation: 2500, Horizontal_Distance_To_Roadways: 1500, Vertical_Distance_To_Hydrology: 50, Slope: 15 },
+            { Cover_Type: 2, Elevation: 2800, Horizontal_Distance_To_Roadways: 1200, Vertical_Distance_To_Hydrology: 30, Slope: 20 },
+            { Cover_Type: 1, Elevation: 2600, Horizontal_Distance_To_Roadways: 1400, Vertical_Distance_To_Hydrology: 45, Slope: 18 },
+            { Cover_Type: 2, Elevation: 2900, Horizontal_Distance_To_Roadways: 1100, Vertical_Distance_To_Hydrology: 40, Slope: 25 },
+            { Cover_Type: 1, Elevation: 2700, Horizontal_Distance_To_Roadways: 1300, Vertical_Distance_To_Hydrology: 35, Slope: 22 },
+            { Cover_Type: 2, Elevation: 3000, Horizontal_Distance_To_Roadways: 1000, Vertical_Distance_To_Hydrology: 25, Slope: 28 }
+        ];
+
+        // Basic Bar Chart
+        function createBarChart(data) {
+            const svg = d3.select("#bar-chart").append("svg")
+                .attr("width", 500)
+                .attr("height", 350);
+
+            const counts = d3.rollups(data, v => v.length, d => d.Cover_Type);
+
+            const xScale = d3.scaleBand()
+                .domain(counts.map(d => d[0]))
+                .range([0, 400])
+                .padding(0.1);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(counts, d => d[1])])
+                .range([300, 0]);
+
+            svg.append("g")
+                .attr("transform", "translate(50, 20)")
+                .selectAll(".bar")
+                .data(counts)
+                .enter().append("rect")
+                .attr("class", "bar")
+                .attr("x", d => xScale(d[0]))
+                .attr("y", d => yScale(d[1]))
+                .attr("width", xScale.bandwidth())
+                .attr("height", d => 300 - yScale(d[1]));
+
+            svg.append("g")
+                .attr("transform", "translate(50, 320)")
+                .call(d3.axisBottom(xScale).tickFormat(d => "Cover Type " + d));
+
+            svg.append("g")
+                .attr("transform", "translate(50, 20)")
+                .call(d3.axisLeft(yScale));
+
+            svg.append("text")
+                .attr("x", 250)
+                .attr("y", 15)
+                .attr("class", "chart-title")
+                .text("Bar Chart of Cover Types");
+
+            svg.append("text")
+                .attr("x", 250)
+                .attr("y", 340)
+                .attr("class", "axis-label")
+                .text("Cover Type");
+
+            svg.append("text")
+                .attr("x", -150)
+                .attr("y", 15)
+                .attr("class", "axis-label")
+                .attr("transform", "rotate(-90)")
+                .text("Count");
+        }
+
+        // Scatter Plot
+        function createScatterPlot(data) {
+            const svg = d3.select("#scatter-plot").append("svg")
+                .attr("width", 500)
+                .attr("height", 350);
+
+            const xScale = d3.scaleLinear()
+                .domain(d3.extent(data, d => d.Elevation))
+                .range([0, 400]);
+
+            const yScale = d3.scaleLinear()
+                .domain(d3.extent(data, d => d.Slope))
+                .range([300, 0]);
+
+            svg.append("g")
+                .attr("transform", "translate(50, 20)")
+                .selectAll(".scatter-dot")
+                .data(data)
+                .enter().append("circle")
+                .attr("class", "scatter-dot")
+                .attr("cx", d => xScale(d.Elevation))
+                .attr("cy", d => yScale(d.Slope))
+                .attr("r", 3);
+
+            svg.append("g")
+                .attr("transform", "translate(50, 320)")
+                .call(d3.axisBottom(xScale));
+
+            svg.append("g")
+                .attr("transform", "translate(50, 20)")
+                .call(d3.axisLeft(yScale));
+
+            svg.append("text")
+                .attr("x", 250)
+                .attr("y", 15)
+                .attr("class", "chart-title")
+                .text("Scatter Plot of Elevation vs Slope");
+
+            svg.append("text")
+                .attr("x", 250)
+                .attr("y", 340)
+                .attr("class", "axis-label")
+                .text("Elevation");
+
+            svg.append("text")
+                .attr("x", -150)
+                .attr("y", 15)
+                .attr("class", "axis-label")
+                .attr("transform", "rotate(-90)")
+                .text("Slope");
+        }
+
+        // Box and Whisker Plot
+        function createBoxWhiskerPlot(data) {
+            const svg = d3.select("#box-whisker-plot").append("svg")
+                .attr("width", 500)
+                .attr("height", 350);
+
+            const types = Array.from(new Set(data.map(d => d.Cover_Type)));
+            const xScale = d3.scaleBand()
+                .domain(types)
+                .range([0, 400])
+                .padding(0.1);
+
+            const yScale = d3.scaleLinear()
+                .domain(d3.extent(data, d => d.Vertical_Distance_To_Hydrology))
+                .range([300, 0]);
+
+            types.forEach(type => {
+                const typeData = data.filter(d => d.Cover_Type === type)
+                    .map(d => d.Vertical_Distance_To_Hydrology);
+
+                const q1 = d3.quantile(typeData, 0.25);
+                const median = d3.quantile(typeData, 0.5);
+                const q3 = d3.quantile(typeData, 0.75);
+                const iqr = q3 - q1;
+                const lower = Math.max(d3.min(typeData), q1 - 1.5 * iqr);
+                const upper = Math.min(d3.max(typeData), q3 + 1.5 * iqr);
+                const x = xScale(type);
+                const width = xScale.bandwidth();
+
+                svg.append("line").attr("x1", x + 50 + width / 2).attr("x2", x + 50 + width / 2)
+                    .attr("y1", yScale(lower)).attr("y2", yScale(upper)).attr("stroke", "black");
+
+                svg.append("rect").attr("x", x + 50).attr("y", yScale(q3)).attr("width", width)
+                    .attr("height", yScale(q1) - yScale(q3)).attr("class", "box");
+
+                svg.append("line").attr("x1", x + 50).attr("x2", x + 50 + width).attr("y1", yScale(median)).attr("y2", yScale(median))
+                    .attr("stroke", "black").attr("stroke-width", 2);
+            });
+
+            svg.append("text")
+                .attr("x", 250)
+                .attr("y", 15)
+                .attr("class", "chart-title")
+                .text("Box and Whisker Plot of Vertical Distance by Cover Type");
+
+            svg.append("text")
+                .attr("x", 250)
+                .attr("y", 340)
+                .attr("class", "axis-label")
+                .text("Cover Type");
+
+            svg.append("text")
+                .attr("x", -150)
+                .attr("y", 15)
+                .attr("class", "axis-label")
+                .attr("transform", "rotate(-90)")
+                .text("Vertical Distance to Hydrology");
+        }
+
+        
+        createBarChart(data);
+        createScatterPlot(data);
+        createBoxWhiskerPlot(data);
+    </script>
+</body>
+</html>
